@@ -12,6 +12,7 @@ src/
     plain_dataset.py
     resnet_dataset.py
   models/
+    clothes_model.py
     resnet.py
   training/
     train_plain.py
@@ -31,7 +32,8 @@ Run the plain TensorFlow pipeline:
 python src\training\train_plain.py
 ```
 
-The plain pipeline intentionally imports the original model from `models/clothes_model.py`.
+The plain/VGG training code lives in `src/training/train_vgg.py`.
+`models/clothes_model.py` is only a thin compatibility wrapper pointing to the VGG code in `src/models/VGG.py`.
 
 Run the ResNet18 PyTorch pipeline on the same local dataset:
 
@@ -52,3 +54,4 @@ python experiments\compare_pipelines.py
 ```
 
 Outputs are written under `experiments/results/`.
+The ResNet training script follows the GitHub training file closely; only dataset/output paths are synchronized for this project.

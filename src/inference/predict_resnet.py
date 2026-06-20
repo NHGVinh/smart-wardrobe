@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.models.resnet import MultiTaskResNet
-from src.preprocessing.resnetPP import build_resnet_transforms, load_resnet_image
+from src.preprocessing.resnetPP import data_transforms, load_resnet_image
 
 
 def parse_args():
@@ -33,7 +33,7 @@ def main():
     model.to(device)
     model.eval()
 
-    batch = build_resnet_transforms(train=False)(load_resnet_image(args.image_path)).unsqueeze(0).to(device)
+    batch = data_transforms["val"](load_resnet_image(args.image_path)).unsqueeze(0).to(device)
     start = time.perf_counter()
     with torch.no_grad():
         cat_out, style_out = model(batch)

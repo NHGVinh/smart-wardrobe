@@ -1,9 +1,17 @@
 import os
+import sys
 import json
 import time
+from pathlib import Path
+
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from utils.data_generator import ClothesDataGenerator
 from models.clothes_model import build_clothes_model
@@ -13,8 +21,8 @@ from models.clothes_model import build_clothes_model
 # 1. Config
 # =========================
 
-CSV_PATH = "styles.csv"
-IMAGE_DIR = "data/images"
+CSV_PATH = str(ROOT / "styles.csv")
+IMAGE_DIR = str(ROOT / "data" / "images")
 TARGET_SIZE = (128, 128)
 
 MAX_PER_CLASS = 750
@@ -60,7 +68,7 @@ def map_article_type(article_type):
 
 df["label_name"] = df["articleType"].apply(map_article_type)
 
-# bỏ những item không thuộc nhóm cần train
+# bá» nhá»¯ng item khÃ´ng thuá»™c nhÃ³m cáº§n train
 df = df.dropna(subset=["label_name"])
 
 print("Classes after mapping:")
@@ -221,9 +229,9 @@ print(f"Evaluation time: {eval_time:.2f} seconds")
 # 12. Save model + label map
 # =========================
 
-model.save("clothes_model.h5")
+model.save(str(ROOT / "clothes_model.h5"))
 
-with open("label_map.json", "w", encoding="utf-8") as f:
+with open(ROOT / "label_map.json", "w", encoding="utf-8") as f:
     json.dump(idx_to_label, f, ensure_ascii=False, indent=4)
 
 print("Saved model to clothes_model.h5")
