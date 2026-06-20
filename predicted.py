@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import json
+import time
 from utils.preprocess import preprocess_image
 
 
@@ -38,7 +39,9 @@ img = np.expand_dims(img, axis=0)
 # 4. Predict
 # =========================
 
+inference_start = time.perf_counter()
 pred = model.predict(img)
+inference_time = time.perf_counter() - inference_start
 
 pred_class = np.argmax(pred)
 confidence = np.max(pred)
@@ -50,6 +53,7 @@ confidence = np.max(pred)
 
 print("Prediction:", idx_to_label[pred_class])
 print("Confidence:", confidence)
+print(f"Inference time: {inference_time:.4f} seconds")
 
 
 # =========================

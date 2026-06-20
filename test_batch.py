@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import tensorflow as tf
 import json
@@ -73,18 +74,21 @@ for file in os.listdir(TEST_FOLDER):
 
     path = os.path.join(TEST_FOLDER, file)
 
+    inference_start = time.perf_counter()
     pred_class, confidence, top3, probs = predict_image(path)
+    inference_time = time.perf_counter() - inference_start
 
     print("\n========================")
     print("File:", file)
     print("Prediction:", idx_to_label[pred_class])
     print("Confidence:", round(float(confidence), 4))
+    print(f"Inference time: {inference_time:.4f} seconds")
 
     print("Top 3:")
     for i in top3:
         print(f"  {idx_to_label[i]}: {probs[i]:.4f}")
 
-    results.append((file, idx_to_label[pred_class], confidence))
+    results.append((file, idx_to_label[pred_class], confidence, inference_time))
 
 
 # =========================
@@ -93,3 +97,11 @@ for file in os.listdir(TEST_FOLDER):
 
 print("\n===== SUMMARY =====")
 print("Total images:", len(results))
+
+if results:
+    inference_times = [item[3] for item in results]
+    total_inference_time = sum(inference_times)
+    avg_inference_time = total_inference_time / len(inference_times)
+
+    print(f"Total inference time: {total_inference_time:.4f} seconds")
+    print(f"Average inference time per image: {avg_inference_time:.4f} seconds")

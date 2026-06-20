@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
@@ -184,6 +185,8 @@ early_stop = tf.keras.callbacks.EarlyStopping(
 # 10. Train
 # =========================
 
+train_start = time.perf_counter()
+
 history = model.fit(
     train_gen,
     epochs=EPOCHS,
@@ -192,15 +195,26 @@ history = model.fit(
     verbose=1
 )
 
+train_time = time.perf_counter() - train_start
+epochs_ran = len(history.history["loss"])
+
+print(f"Training time: {train_time:.2f} seconds")
+print(f"Training time per epoch: {train_time / epochs_ran:.2f} seconds")
+
 
 # =========================
 # 11. Evaluate
 # =========================
 
+eval_start = time.perf_counter()
+
 test_loss, test_acc = model.evaluate(test_gen)
+
+eval_time = time.perf_counter() - eval_start
 
 print("Test loss:", test_loss)
 print("Test accuracy:", test_acc)
+print(f"Evaluation time: {eval_time:.2f} seconds")
 
 
 # =========================
