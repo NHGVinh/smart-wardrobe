@@ -67,6 +67,8 @@ for i in top3:
     print(f"{idx_to_label[i]}: {pred[0][i]:.4f}")
 
 # chạy thử logic xuất style
+style_start = time.perf_counter()
+
 from utils.style_engine import infer_style
 predicted_class = idx_to_label[pred_class]
 from utils.color_extractor import extract_color_features, rgb_to_color_name
@@ -79,6 +81,8 @@ style, scores = infer_style(
     pattern_score=0.3,
     color_complexity=complexity
 )
+
+style_time = time.perf_counter() - style_start
 
 print("Color:", color)
 print("Color complexity:", complexity)
@@ -206,6 +210,8 @@ gender = input("Choose gender (Men/Women/Unisex): ").strip()
 if gender not in ["Men", "Women", "Unisex"]:
     gender = "Unisex"
 
+recommend_start = time.perf_counter()
+
 outfit = recommend_outfit(
     csv_path="styles.csv",
     input_class=predicted_class,
@@ -214,4 +220,8 @@ outfit = recommend_outfit(
     user_image_path=user_img_path,
     gender=gender
 )
+recommend_time = time.perf_counter() - recommend_start
+
+print(f">> Recommendation logic time: {recommend_time:.4f} seconds")
 show_outfit_balanced(outfit)
+
