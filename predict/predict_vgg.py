@@ -2,6 +2,8 @@ import argparse
 import json
 import sys
 import time
+import os
+import glob
 from pathlib import Path
 
 import numpy as np
@@ -21,7 +23,8 @@ from utils.vgg.style_engine import infer_style
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run inference with the VGG clothes classifier.")
-    parser.add_argument("image_path", nargs="?", default=str(ROOT / "test_images" / "test_pants_1.png"))
+    # Thay đổi mặc định thành quét cả thư mục test_images
+    parser.add_argument("image_path", nargs="?", default=str(ROOT / "test_images"))
     parser.add_argument("--model", default=str(DEFAULT_MODEL_PATH))
     parser.add_argument("--labels", default=str(DEFAULT_LABELS_PATH))
     return parser.parse_args()
@@ -33,22 +36,27 @@ def load_label_map(path):
     return {int(k): v for k, v in idx_to_label.items()}
 
 
-def predict_vgg(image_path, model_path, labels_path):
-    model = tf.keras.models.load_model(model_path)
-    idx_to_label = load_label_map(labels_path)
-
+# Đã truyền model và idx_to_label vào đây để không phải load lại mỗi lần gọi
+def predict_vgg(image_path, model, idx_to_label):
+    
+    # --- 1. Preprocess ---
+    pre_start = time.perf_counter()
     img = preprocess_vgg_image(image_path, target_size=(128, 128))
     batch = np.expand_dims(img, axis=0)
+    pre_time = time.perf_counter() - pre_start
 
-    start = time.perf_counter()
+    # --- 2. Inference ---
+    inf_start = time.perf_counter()
     pred = model.predict(batch, verbose=0)
-    elapsed = time.perf_counter() - start
+    inf_time = time.perf_counter() - inf_start
 
     pred_class = int(np.argmax(pred))
     confidence = float(np.max(pred))
     top3 = np.argsort(pred[0])[-3:][::-1]
     predicted_class = idx_to_label[pred_class]
 
+    # --- 3. Style Analysis ---
+    style_start = time.perf_counter()
     rgb, complexity = extract_color_features(image_path)
     color = rgb_to_color_name(rgb)
     style, scores = infer_style(
@@ -57,6 +65,7 @@ def predict_vgg(image_path, model_path, labels_path):
         pattern_score=0.3,
         color_complexity=complexity,
     )
+    style_time = time.perf_counter() - style_start
 
     return {
         "prediction": predicted_class,
@@ -66,28 +75,66 @@ def predict_vgg(image_path, model_path, labels_path):
         "color_complexity": int(complexity),
         "style": style,
         "style_scores": scores,
-        "inference_time": elapsed,
+        "time_pre": pre_time,
+        "time_inf": inf_time,
+        "time_style": style_time
     }
 
 
 def main():
     args = parse_args()
-    result = predict_vgg(args.image_path, args.model, args.labels)
+    
+    # 1. LOAD MODEL VÀ NHÃN (Chỉ load 1 lần duy nhất để tối ưu)
+    print("--- Loading VGG Model & Label Map ---")
+    model = tf.keras.models.load_model(args.model)
+    idx_to_label = load_label_map(args.labels)
 
-    print("Model: VGG")
-    print("Prediction:", result["prediction"])
-    print(f"Confidence: {result['confidence']:.4f}")
-    print(f"Inference time: {result['inference_time']:.4f} seconds")
+    # 2. XÁC ĐỊNH LÀ CHẠY 1 ẢNH HAY QUÉT CẢ THƯ MỤC
+    path_obj = Path(args.image_path)
+    image_paths = []
+    
+    if path_obj.is_dir():
+        # Quét tất cả file .png và .jpg nếu truyền vào là thư mục
+        image_paths.extend(glob.glob(str(path_obj / "*.png")))
+        image_paths.extend(glob.glob(str(path_obj / "*.jpg")))
+    elif path_obj.is_file():
+        image_paths = [str(path_obj)]
+    else:
+        print(f"Error: Path {args.image_path} does not exist.")
+        sys.exit(1)
 
-    print("\nTop 3 predictions:")
-    for label, score in result["top3"]:
-        print(f"{label}: {score:.4f}")
+    print(f"\n=> Found {len(image_paths)} images to process.\n")
 
-    print("\nRule-based attributes:")
-    print("Color:", result["color"])
-    print("Color complexity:", result["color_complexity"])
-    print("Style:", result["style"])
-    print("Style scores:", result["style_scores"])
+    # 3. VÒNG LẶP XỬ LÝ HÀNG LOẠT
+    for img_path in image_paths:
+        file_name = Path(img_path).name
+        print("=" * 50)
+        print(f"PROCESSING IMAGE: {file_name}")
+        print("=" * 50)
+
+        total_start = time.perf_counter()
+        
+        # Gọi hàm dự đoán
+        result = predict_vgg(img_path, model, idx_to_label)
+        
+        total_time = time.perf_counter() - total_start
+
+        # In kết quả
+        print(f"Prediction: {result['prediction']} (Confidence: {result['confidence']:.4f})")
+        print("\nTop 3 predictions:")
+        for label, score in result["top3"]:
+            print(f" - {label}: {score:.4f}")
+
+        print("\nRule-based attributes:")
+        print(f"Color: {result['color']} (Complexity: {result['color_complexity']})")
+        print(f"Style: {result['style']}")
+
+        # Báo cáo thời gian (Tiếng Anh)
+        print("\n[ TIMING REPORT ]")
+        print(f">> Preprocess time:   {result['time_pre']:.4f} seconds")
+        print(f">> Inference time:    {result['time_inf']:.4f} seconds")
+        print(f">> Style analysis:    {result['time_style']:.4f} seconds")
+        print(f">> TOTAL TIME:        {total_time:.4f} seconds\n")
 
 
 if __name__ == "__main__":

@@ -15,12 +15,18 @@ import time
 import copy
 from sklearn.model_selection import train_test_split
 
+# Bắt đầu đo tổng thời gian chạy script
+script_start_time = time.perf_counter()
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"[*] Đang sử dụng thiết bị: {device}")
 
 # ==========================================
 # 1. ĐỌC VÀ LỌC DỮ LIỆU TỪ FILE CSV
 # ==========================================
+print("\n--- 1. Chuẩn bị dữ liệu ---")
+prep_start_time = time.perf_counter()
+
 print("[*] Đang đọc file styles.csv...")
 df = pd.read_csv('styles.csv', on_bad_lines='skip')
 image_dir = 'data/images'
@@ -130,7 +136,10 @@ image_datasets = {
 }
 dataloaders = {x: DataLoader(image_datasets[x], batch_size=32, shuffle=True) for x in ['train', 'val']}
 
-# Tạo Kiến trúc 1 Não - 2 Đầu Ra
+prep_time = time.perf_counter() - prep_start_time
+print(f">> Khởi tạo dữ liệu và DataLoader hoàn tất trong: {prep_time:.2f} giây\n")
+
+# Tạo Kiến trúc 1 Không - 2 Đầu Ra
 class MultiTaskResNet(nn.Module):
     def __init__(self, num_categories, num_styles):
         super(MultiTaskResNet, self).__init__()
@@ -177,7 +186,12 @@ num_epochs = 20
 best_model_wts = copy.deepcopy(model.state_dict())
 best_acc = 0.0
 
+print("\n--- 2. Bắt đầu quá trình huấn luyện ---")
+train_start_time = time.perf_counter()
+
 for epoch in range(num_epochs):
+    epoch_start_time = time.perf_counter() # Bắt đầu đo thời gian 1 Epoch
+    
     print(f'Epoch {epoch+1}/{num_epochs}')
     print('-' * 10)
 
@@ -223,9 +237,26 @@ for epoch in range(num_epochs):
         if phase == 'val' and epoch_acc > best_acc:
             best_acc = epoch_acc
             best_model_wts = copy.deepcopy(model.state_dict())
+    
     exp_lr_scheduler.step()
-    print()
+    
+    # Kết thúc đo thời gian 1 Epoch
+    epoch_time = time.perf_counter() - epoch_start_time
+    print(f'>> Epoch {epoch+1} hoàn tất trong: {epoch_time:.2f} giây\n')
+
+# Kết thúc toàn bộ quá trình train
+train_total_time = time.perf_counter() - train_start_time
 
 model.load_state_dict(best_model_wts)
 torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, 'resnet_model.pth'))
-print("\n[*] Đã lưu mô hình KÉP vào file 'weights/resnet/resnet_model.pth'")
+print(f"[*] Đã lưu mô hình KÉP vào file '{OUTPUT_DIR}/resnet_model.pth'")
+
+# Báo cáo tổng kết
+script_total_time = time.perf_counter() - script_start_time
+print("\n==================================================")
+print("[ BÁO CÁO THỜI GIAN HUẤN LUYỆN ]")
+print(f"Chuẩn bị dữ liệu: {prep_time:.2f} giây")
+print(f"Thời gian Train ({num_epochs} Epochs): {train_total_time:.2f} giây")
+print(f"TỔNG THỜI GIAN CHẠY SCRIPT: {script_total_time:.2f} giây")
+print(f"Độ chính xác cao nhất (Best Val Acc): {best_acc:.4f}")
+print("==================================================\n")

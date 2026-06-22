@@ -1,0 +1,22 @@
+{
+  "pipeline": "vgg",
+  "preprocessing": "vggPP",
+  "model": "vgg16",
+  "task": "grouped_category",
+  "classes": [
+    "Accessories",
+    "Bottomwear",
+    "Dress",
+    "Shoes",
+    "Topwear"
+  ],
+  "num_rows": 3464,
+  "train_size": 2216,
+  "val_size": 555,
+  "test_size": 693,
+  "epochs_ran": 20,
+  "train_time_seconds": 112.7653482589999,
+  "eval_time_seconds": 5.89795240300009,
+  "test_loss": 0.15851940214633942,
+  "test_accuracy": 0.9581529498100281
+}

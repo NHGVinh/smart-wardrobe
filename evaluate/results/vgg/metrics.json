@@ -1,0 +1,21 @@
+{
+  "model_path": "/content/smart-wardrobe/weights/vgg/vgg_model.h5",
+  "test_size": 693,
+  "accuracy": 0.9581529581529582,
+  "precision_macro": 0.9533544697488093,
+  "recall_macro": 0.9507096774193547,
+  "f1_macro": 0.9519213946528264,
+  "precision_weighted": 0.957835349574931,
+  "recall_weighted": 0.9581529581529582,
+  "f1_weighted": 0.9579093158437658,
+  "inference_time_seconds": 10.30960610999955,
+  "inference_time_per_image_seconds": 0.014876776493505843,
+  "params": 14847313,
+  "classes": [
+    "Accessories",
+    "Bottomwear",
+    "Dress",
+    "Shoes",
+    "Topwear"
+  ]
+}

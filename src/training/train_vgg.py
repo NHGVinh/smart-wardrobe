@@ -1,189 +1,102 @@
-import os
-import sys
+import argparse
+import csv
 import json
+import sys
 import time
 from pathlib import Path
 
 import tensorflow as tf
 
-
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.data.splits import prepare_plain_dataframe, split_dataframe
+from src.data.splits import prepare_plain_dataframe, save_split_csvs, split_dataframe
 from src.models.VGG import build_clothes_model
 from utils.vgg.data_generator import ClothesDataGenerator
 
 
-# =========================
-# 1. Config
-# =========================
-
-CSV_PATH = str(ROOT / "styles.csv")
-IMAGE_DIR = str(ROOT / "data" / "images")
-WEIGHTS_DIR = ROOT / "weights" / "vgg"
-MODEL_PATH = WEIGHTS_DIR / "vgg_model.h5"
-LABEL_MAP_PATH = WEIGHTS_DIR / "label_map.json"
-TARGET_SIZE = (128, 128)
-
-MAX_PER_CLASS = 750
-BATCH_SIZE = 32
-EPOCHS = 30
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train the VGG TensorFlow pipeline.")
+    parser.add_argument("--csv-path", default=str(ROOT / "styles.csv"))
+    parser.add_argument("--image-dir", default=str(ROOT / "data" / "images"))
+    parser.add_argument("--output-dir", default=str(ROOT / "weights" / "vgg"))
+    parser.add_argument("--max-per-class", type=int, default=750)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--seed", type=int, default=42)
+    return parser.parse_args()
 
 
-# =========================
-# 2. Prepare dataframe
-# =========================
-
-df = prepare_plain_dataframe(
-    CSV_PATH,
-    IMAGE_DIR,
-    max_per_class=MAX_PER_CLASS,
-    seed=42,
-)
-
-
-# bá» nhá»¯ng item khÃ´ng thuá»™c nhÃ³m cáº§n train
-print("Prepared images:", len(df))
-print(df["label_name"].value_counts())
+def write_history(path, history):
+    keys = list(history.history.keys())
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["epoch", *keys])
+        writer.writeheader()
+        for idx in range(len(history.history[keys[0]])):
+            row = {"epoch": idx + 1}
+            row.update({key: history.history[key][idx] for key in keys})
+            writer.writerow(row)
 
 
-# =========================
-# 3. Create label map
-# =========================
+def main():
+    args = parse_args()
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-selected_classes = sorted(df["label_name"].unique())
+    df = prepare_plain_dataframe(
+        args.csv_path,
+        args.image_dir,
+        max_per_class=args.max_per_class,
+        seed=args.seed,
+    )
+    train_df, val_df, test_df = split_dataframe(df, "label_name", seed=args.seed)
+    save_split_csvs(output_dir / "splits", train_df, val_df, test_df)
 
-label_map = {label: idx for idx, label in enumerate(selected_classes)}
-idx_to_label = {idx: label for label, idx in label_map.items()}
+    classes = sorted(df["label_name"].unique())
+    label_map = {label: idx for idx, label in enumerate(classes)}
+    idx_to_label = {idx: label for label, idx in label_map.items()}
 
-df["label"] = df["label_name"].map(label_map)
+    train_gen = ClothesDataGenerator(train_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=True)
+    val_gen = ClothesDataGenerator(val_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=False)
+    test_gen = ClothesDataGenerator(test_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=False)
 
-NUM_CLASSES = len(label_map)
+    model = build_clothes_model(input_shape=(128, 128, 3), num_classes=len(label_map))
+    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 
-print("Selected classes:", selected_classes)
-print("NUM_CLASSES:", NUM_CLASSES)
+    train_start = time.perf_counter()
+    history = model.fit(train_gen, epochs=args.epochs, validation_data=val_gen, verbose=1)
+    train_time = time.perf_counter() - train_start
 
+    eval_start = time.perf_counter()
+    test_loss, test_acc = model.evaluate(test_gen, verbose=1)
+    eval_time = time.perf_counter() - eval_start
 
-# =========================
-# 4. Train / Val / Test split
-# =========================
+    model.save(output_dir / "vgg_model.h5")
+    with open(output_dir / "label_map.json", "w", encoding="utf-8") as f:
+        json.dump(idx_to_label, f, ensure_ascii=False, indent=2)
+    write_history(output_dir / "history.csv", history)
 
-train_df, val_df, test_df = split_dataframe(df, stratify_col="label_name", seed=42)
-
-print("Train size:", len(train_df))
-print("Val size:", len(val_df))
-print("Test size:", len(test_df))
-
-
-# =========================
-# 5. Data generators
-# =========================
-
-train_gen = ClothesDataGenerator(
-    train_df,
-    IMAGE_DIR,
-    label_map,
-    batch_size=BATCH_SIZE,
-    target_size=TARGET_SIZE,
-    shuffle=True
-)
-
-val_gen = ClothesDataGenerator(
-    val_df,
-    IMAGE_DIR,
-    label_map,
-    batch_size=BATCH_SIZE,
-    target_size=TARGET_SIZE,
-    shuffle=False
-)
-
-test_gen = ClothesDataGenerator(
-    test_df,
-    IMAGE_DIR,
-    label_map,
-    batch_size=BATCH_SIZE,
-    target_size=TARGET_SIZE,
-    shuffle=False
-)
-
-
-# =========================
-# 6. Build model
-# =========================
-
-model = build_clothes_model(
-    input_shape=(128, 128, 3),
-    num_classes=NUM_CLASSES
-)
-
-model.compile(
-    optimizer="adam",
-    loss="categorical_crossentropy",
-    metrics=["accuracy"]
-)
-
-model.summary()
+    metrics = {
+        "pipeline": "vgg",
+        "preprocessing": "vggPP",
+        "model": "vgg16",
+        "task": "grouped_category",
+        "classes": classes,
+        "num_rows": int(len(df)),
+        "train_size": int(len(train_df)),
+        "val_size": int(len(val_df)),
+        "test_size": int(len(test_df)),
+        "epochs_ran": int(len(history.history["loss"])),
+        "train_time_seconds": train_time,
+        "eval_time_seconds": eval_time,
+        "test_loss": float(test_loss),
+        "test_accuracy": float(test_acc),
+    }
+    with open(output_dir / "metrics.json", "w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=2)
+    print(json.dumps(metrics, ensure_ascii=False, indent=2))
 
 
-# =========================
-# 7. EarlyStopping
-# =========================
-
-early_stop = tf.keras.callbacks.EarlyStopping(
-    monitor="val_loss",
-    patience=5,
-    restore_best_weights=True
-)
-
-
-# =========================
-# 8. Train
-# =========================
-
-train_start = time.perf_counter()
-
-history = model.fit(
-    train_gen,
-    epochs=EPOCHS,
-    validation_data=val_gen,
-    callbacks=[early_stop],
-    verbose=1
-)
-
-train_time = time.perf_counter() - train_start
-epochs_ran = len(history.history["loss"])
-
-print(f"Training time: {train_time:.2f} seconds")
-print(f"Training time per epoch: {train_time / epochs_ran:.2f} seconds")
-
-
-# =========================
-# 9. Evaluate
-# =========================
-
-eval_start = time.perf_counter()
-
-test_loss, test_acc = model.evaluate(test_gen)
-
-eval_time = time.perf_counter() - eval_start
-
-print("Test loss:", test_loss)
-print("Test accuracy:", test_acc)
-print(f"Evaluation time: {eval_time:.2f} seconds")
-
-
-# =========================
-# 10. Save model + label map
-# =========================
-
-WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
-
-model.save(str(MODEL_PATH))
-
-with open(LABEL_MAP_PATH, "w", encoding="utf-8") as f:
-    json.dump(idx_to_label, f, ensure_ascii=False, indent=4)
-
-print(f"Saved model to {MODEL_PATH}")
-print(f"Saved label map to {LABEL_MAP_PATH}")
+if __name__ == "__main__":
+    main()
