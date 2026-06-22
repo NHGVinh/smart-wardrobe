@@ -64,9 +64,8 @@ def main():
     model = build_clothes_model(input_shape=(128, 128, 3), num_classes=len(label_map))
     model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True)
     train_start = time.perf_counter()
-    history = model.fit(train_gen, epochs=args.epochs, validation_data=val_gen, callbacks=[early_stop], verbose=1)
+    history = model.fit(train_gen, epochs=args.epochs, validation_data=val_gen, verbose=1)
     train_time = time.perf_counter() - train_start
 
     eval_start = time.perf_counter()

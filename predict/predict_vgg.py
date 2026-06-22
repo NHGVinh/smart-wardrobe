@@ -16,6 +16,7 @@ DEFAULT_LABELS_PATH = ROOT / "weights" / "vgg" / "label_map.json"
 
 from src.preprocessing.vggPP import preprocess_vgg_image
 from utils.vgg.color_extractor import extract_color_features, rgb_to_color_name
+from utils.vgg.recommender import recommend_outfit
 from utils.vgg.style_engine import infer_style
 
 
@@ -24,6 +25,12 @@ def parse_args():
     parser.add_argument("image_path", nargs="?", default=str(ROOT / "test_images" / "test_pants_1.png"))
     parser.add_argument("--model", default=str(DEFAULT_MODEL_PATH))
     parser.add_argument("--labels", default=str(DEFAULT_LABELS_PATH))
+    parser.add_argument(
+        "--wardrobe-csv",
+        default=str(ROOT / "styles.csv"),
+        help="CSV used for rule-based outfit suggestions.",
+    )
+    parser.add_argument("--gender", default="Unisex", help="Gender filter for outfit suggestions.")
     return parser.parse_args()
 
 
@@ -70,6 +77,20 @@ def predict_vgg(image_path, model_path, labels_path):
     }
 
 
+def print_outfit(outfit):
+    print("\nRule-based outfit suggestion:")
+    for slot, item in outfit.items():
+        if item is None:
+            print(f"{slot}: No match")
+            continue
+
+        name = item.get("productDisplayName") or item.get("articleType") or "Unnamed item"
+        image_path = item.get("image_path")
+        color = item.get("baseColour")
+        style = item.get("usage")
+        print(f"{slot}: {name} | color={color} | style={style} | image={image_path}")
+
+
 def main():
     args = parse_args()
     result = predict_vgg(args.image_path, args.model, args.labels)
@@ -88,6 +109,16 @@ def main():
     print("Color complexity:", result["color_complexity"])
     print("Style:", result["style"])
     print("Style scores:", result["style_scores"])
+
+    outfit = recommend_outfit(
+        args.wardrobe_csv,
+        result["prediction"],
+        result["color"],
+        input_style=result["style"],
+        user_image_path=args.image_path,
+        gender=args.gender,
+    )
+    print_outfit(outfit)
 
 
 if __name__ == "__main__":
