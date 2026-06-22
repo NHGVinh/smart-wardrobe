@@ -1,51 +1,71 @@
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
+import numpy as np
+from tensorflow.keras.applications import VGG16
 
-def build_clothes_model(input_shape=(128,128,3), num_classes=4):
-    """
-    flow:
-    preprocessed photo
-    vgg16: 13 lớp conv + 3 lớp fully connected
-    flatten
-    dense
-    softmax
-    """
-    model = tf.keras.Sequential([
-        # Khối 1: Trích xuất đặc trưng bậc 64 filter: ảnh 128x128 --> 64x64
-        tfl.Conv2D(64, (3, 3), activation='relu', padding='same', input_shape=input_shape),
-        tfl.Conv2D(64, (3, 3), activation='relu', padding='same'),
-        tfl.MaxPooling2D((2, 2), strides=(2, 2)),
 
-        # Khối 2: Trích xuất đặc trưng bậc 128 filter: ảnh 64x64 --> 32x32
-        tfl.Conv2D(128, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(128, (3, 3), activation='relu', padding='same'),
-        tfl.MaxPooling2D((2, 2), strides=(2, 2)),
-    
-        # Khối 3: Trích xuất đặc trưng bậc 256 filter: ảnh 32x32 --> 16x16
-        tfl.Conv2D(256, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(256, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(256, (3, 3), activation='relu', padding='same'),
-        tfl.MaxPooling2D((2, 2), strides=(2, 2)),
-    
-        # Khối 4: Trích xuất đặc trưng bậc 512 filter: ảnh 16x16 --> 8x8
-        tfl.Conv2D(512, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(512, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(512, (3, 3), activation='relu', padding='same'),
-        tfl.MaxPooling2D((2, 2), strides=(2, 2)),          
-    
-        # Khối 5: Trích xuất đặc trưng bậc 512 filter: ảnh 8x8 --> 4x4
-        tfl.Conv2D(512, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(512, (3, 3), activation='relu', padding='same'),
-        tfl.Conv2D(512, (3, 3), activation='relu', padding='same'),
-        tfl.MaxPooling2D((2, 2), strides=(2, 2)),       
-    
-        # flatten + dense + softmax
-        tfl.Flatten(),
-        tfl.Dense(512, activation='relu'), 
-        tfl.Dropout(0.5), 
-        tfl.Dense(512, activation='relu'),
-        tfl.Dropout(0.5),
-        tfl.Dense(num_classes, activation='softmax')
-    ])
-    
-    return model
+def build_clothes_model(
+    input_shape=(128, 128, 3),
+    num_classes=4,
+    weights="imagenet",
+    train_base=False,
+):
+    """Build a VGG16 transfer-learning classifier.
+
+    The existing data pipeline returns RGB images scaled to 0..1. VGG16's
+    ImageNet weights expect VGG preprocessing on 0..255 images, so the model
+    does that conversion internally to keep training and prediction consistent.
+    """
+    base_model = VGG16(
+        include_top=False,
+        weights=weights,
+        input_shape=input_shape,
+    )
+    base_model.trainable = train_base
+
+    inputs = tf.keras.Input(shape=input_shape)
+    x = _vgg16_preprocess(inputs)
+    x = base_model(x)
+    x = tfl.GlobalAveragePooling2D(name="avg_pool")(x)
+    x = tfl.Dense(256, activation="relu")(x)
+    x = tfl.Dropout(0.5)(x)
+    outputs = tfl.Dense(num_classes, activation="softmax")(x)
+
+    return tf.keras.Model(inputs=inputs, outputs=outputs, name="clothes_vgg16")
+
+
+def _vgg16_preprocess(inputs):
+    preprocess = tfl.Conv2D(
+        3,
+        kernel_size=1,
+        padding="same",
+        use_bias=True,
+        trainable=False,
+        name="vgg16_preprocess",
+    )
+    outputs = preprocess(inputs)
+
+    kernel = np.zeros((1, 1, 3, 3), dtype=np.float32)
+    kernel[0, 0, 2, 0] = 255.0  # RGB input -> BGR output
+    kernel[0, 0, 1, 1] = 255.0
+    kernel[0, 0, 0, 2] = 255.0
+    bias = np.array([-103.939, -116.779, -123.68], dtype=np.float32)
+    preprocess.set_weights([kernel, bias])
+
+    return outputs
+
+
+def unlock_last_block(model):
+    """Freeze VGG16 except block5 for fine-tuning after warmup training."""
+    for layer in model.layers:
+        layer.trainable = False
+
+    vgg16 = model.get_layer("vgg16")
+    vgg16.trainable = True
+
+    for layer in vgg16.layers:
+        layer.trainable = layer.name.startswith("block5")
+
+    for layer in model.layers:
+        if not layer.name.startswith("vgg16"):
+            layer.trainable = True
