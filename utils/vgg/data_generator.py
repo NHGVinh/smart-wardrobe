@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
-from utils.preprocess import preprocess_image
+
+from src.preprocessing.vggPP import preprocess_vgg_image
 
 
 class ClothesDataGenerator(tf.keras.utils.Sequence):
@@ -20,34 +21,30 @@ class ClothesDataGenerator(tf.keras.utils.Sequence):
     def __getitem__(self, index):
         batch_indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
-        X_batch = []
-        Y_batch = []
+        x_batch = []
+        y_batch = []
 
         for i in batch_indexes:
             row = self.df.iloc[i]
             image_path = f"{self.image_dir}/{row['id']}.jpg"
 
-            
-            mode = "shoes" if row["label_name"] == "Shoes" else "default"
-
-            img = preprocess_image(
+            img = preprocess_vgg_image(
                 image_path,
                 target_size=self.target_size,
-                mode=mode
             )
 
             label = self.label_map[row["label_name"]]
 
-            X_batch.append(img)
-            Y_batch.append(label)
+            x_batch.append(img)
+            y_batch.append(label)
 
-        X_batch = np.array(X_batch, dtype=np.float32)
-        Y_batch = tf.keras.utils.to_categorical(
-            Y_batch,
-            num_classes=len(self.label_map)
+        x_batch = np.array(x_batch, dtype=np.float32)
+        y_batch = tf.keras.utils.to_categorical(
+            y_batch,
+            num_classes=len(self.label_map),
         )
 
-        return X_batch, Y_batch
+        return x_batch, y_batch
 
     def on_epoch_end(self):
         if self.shuffle:

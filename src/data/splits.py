@@ -53,12 +53,17 @@ def filter_existing_images(df, image_dir):
     return df[df["id"].apply(lambda image_id: (image_dir / f"{image_id}.jpg").exists())].copy()
 
 
-def prepare_plain_dataframe(csv_path, image_dir, max_per_class=750):
+def prepare_plain_dataframe(csv_path, image_dir, max_per_class=750, seed=42):
     df = pd.read_csv(csv_path, on_bad_lines="skip")
     df["label_name"] = df["articleType"].apply(map_plain_article_type)
     df = df.dropna(subset=["label_name"])
     df = filter_existing_images(df, image_dir)
-    return df.groupby("label_name", group_keys=False).head(max_per_class).reset_index(drop=True)
+    return (
+        df.sample(frac=1, random_state=seed)
+        .groupby("label_name", group_keys=False)
+        .head(max_per_class)
+        .reset_index(drop=True)
+    )
 
 
 def prepare_resnet_dataframe(csv_path, image_dir, max_per_class=600):

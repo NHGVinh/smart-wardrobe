@@ -24,7 +24,7 @@ print(f"[*] Đang sử dụng thiết bị: {device}")
 print("[*] Đang đọc file styles.csv...")
 df = pd.read_csv('styles.csv', on_bad_lines='skip')
 image_dir = 'data/images'
-OUTPUT_DIR = 'experiments/results/resnet'
+OUTPUT_DIR = 'weights/resnet'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Lọc chỉ lấy Quần áo và bỏ qua các dòng bị thiếu dữ liệu Phong cách (usage)
@@ -227,5 +227,5 @@ for epoch in range(num_epochs):
     print()
 
 model.load_state_dict(best_model_wts)
-torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, 'my_wardrobe_multitask.pth'))
-print("\n[*] Đã lưu mô hình KÉP vào file 'experiments/results/resnet/my_wardrobe_multitask.pth'")
+torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, 'resnet_model.pth'))
+print("\n[*] Đã lưu mô hình KÉP vào file 'weights/resnet/resnet_model.pth'")

@@ -1,45 +1,26 @@
-from utils.preprocess import preprocess_image
 import numpy as np
 from sklearn.cluster import KMeans
-import cv2
+
+from src.preprocessing.vggPP import preprocess_vgg_image_with_mask
 
 
 def extract_color_features(image_path, target_size=(128, 128), k=3):
-    # 👉 dùng ROI đã crop
-    img = preprocess_image(image_path, target_size)
-    h, w, _ = img.shape
+    img, item_mask = preprocess_vgg_image_with_mask(image_path, target_size)
+    pixels = (img[item_mask] * 255).astype(np.uint8)
 
-    # crop vùng trung tâm 50%
-    x1 = int(w * 0.25)
-    x2 = int(w * 0.75)
-    y1 = int(h * 0.25)
-    y2 = int(h * 0.75)
-
-    img = img[y1:y2, x1:x2]
-    # convert về dạng pixel
-    pixels = img.reshape(-1, 3)
-
-    # scale lại về 0-255 nếu preprocess đã normalize
-    pixels = (pixels * 255).astype(np.uint8)
-
-    # KMeans
+    k = min(k, len(pixels))
     kmeans = KMeans(n_clusters=k, n_init=10)
     kmeans.fit(pixels)
 
     counts = np.bincount(kmeans.labels_)
-
     dominant = kmeans.cluster_centers_[np.argmax(counts)]
 
-    # ===== color complexity =====
     total = np.sum(counts)
     significant_clusters = sum(c / total > 0.15 for c in counts)
 
     return dominant.astype(int), significant_clusters
 
-# lấy màu gần nhất
-import numpy as np
 
-# palette gần giống styles.csv
 COLOR_DICT = {
     "Black": [0, 0, 0],
     "White": [255, 255, 255],
@@ -57,7 +38,7 @@ COLOR_DICT = {
     "Brown": [139, 69, 19],
     "Beige": [245, 245, 220],
     "Khaki": [195, 176, 145],
-    "Multi": [128, 128, 64]  # fallback
+    "Multi": [128, 128, 64],
 }
 
 

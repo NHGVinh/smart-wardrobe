@@ -4,17 +4,16 @@ import json
 import time
 from pathlib import Path
 
-import pandas as pd
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from utils.data_generator import ClothesDataGenerator
-from models.clothes_model import build_clothes_model
+from src.data.splits import prepare_plain_dataframe, split_dataframe
+from src.models.VGG import build_clothes_model
+from utils.vgg.data_generator import ClothesDataGenerator
 
 
 # =========================
@@ -23,6 +22,9 @@ from models.clothes_model import build_clothes_model
 
 CSV_PATH = str(ROOT / "styles.csv")
 IMAGE_DIR = str(ROOT / "data" / "images")
+WEIGHTS_DIR = ROOT / "weights" / "vgg"
+MODEL_PATH = WEIGHTS_DIR / "vgg_model.h5"
+LABEL_MAP_PATH = WEIGHTS_DIR / "label_map.json"
 TARGET_SIZE = (128, 128)
 
 MAX_PER_CLASS = 750
@@ -31,65 +33,24 @@ EPOCHS = 30
 
 
 # =========================
-# 2. Read CSV
+# 2. Prepare dataframe
 # =========================
 
-df = pd.read_csv(CSV_PATH, on_bad_lines="skip")
-
-print("Total rows:", len(df))
-
-
-# =========================
-# 3. Map articleType -> grouped class
-# =========================
-
-def map_article_type(article_type):
-    if article_type in ["Tshirts", "Shirts", "Tops", "Kurtas"]:
-        return "Topwear"
-
-    elif article_type in ["Jeans", "Trousers", "Shorts", "Track Pants"]:
-        return "Bottomwear"
-
-    elif (
-        "Shoes" in str(article_type)
-        or article_type in ["Heels", "Flats", "Sandals", "Flip Flops"]
-    ):
-        return "Shoes"
-
-    elif article_type in ["Dresses"]:
-        return "Dress"
-
-    elif article_type in ["Handbags", "Watches", "Belts", "Wallets"]:
-        return "Accessories"
-
-    else:
-        return None
-
-
-df["label_name"] = df["articleType"].apply(map_article_type)
-
-# bá» nhá»¯ng item khÃ´ng thuá»™c nhÃ³m cáº§n train
-df = df.dropna(subset=["label_name"])
-
-print("Classes after mapping:")
-print(df["label_name"].value_counts())
-
-
-# =========================
-# 4. Balance dataset
-# =========================
-
-df = (
-    df.groupby("label_name", group_keys=False)
-      .head(MAX_PER_CLASS)
+df = prepare_plain_dataframe(
+    CSV_PATH,
+    IMAGE_DIR,
+    max_per_class=MAX_PER_CLASS,
+    seed=42,
 )
 
-print("Number of images after balancing:", len(df))
+
+# bá» nhá»¯ng item khÃ´ng thuá»™c nhÃ³m cáº§n train
+print("Prepared images:", len(df))
 print(df["label_name"].value_counts())
 
 
 # =========================
-# 5. Create label map
+# 3. Create label map
 # =========================
 
 selected_classes = sorted(df["label_name"].unique())
@@ -106,22 +67,10 @@ print("NUM_CLASSES:", NUM_CLASSES)
 
 
 # =========================
-# 6. Train / Val / Test split
+# 4. Train / Val / Test split
 # =========================
 
-train_df, test_df = train_test_split(
-    df,
-    test_size=0.2,
-    random_state=42,
-    stratify=df["label_name"]
-)
-
-train_df, val_df = train_test_split(
-    train_df,
-    test_size=0.2,
-    random_state=42,
-    stratify=train_df["label_name"]
-)
+train_df, val_df, test_df = split_dataframe(df, stratify_col="label_name", seed=42)
 
 print("Train size:", len(train_df))
 print("Val size:", len(val_df))
@@ -129,7 +78,7 @@ print("Test size:", len(test_df))
 
 
 # =========================
-# 7. Data generators
+# 5. Data generators
 # =========================
 
 train_gen = ClothesDataGenerator(
@@ -161,7 +110,7 @@ test_gen = ClothesDataGenerator(
 
 
 # =========================
-# 8. Build model
+# 6. Build model
 # =========================
 
 model = build_clothes_model(
@@ -179,7 +128,7 @@ model.summary()
 
 
 # =========================
-# 9. EarlyStopping
+# 7. EarlyStopping
 # =========================
 
 early_stop = tf.keras.callbacks.EarlyStopping(
@@ -190,7 +139,7 @@ early_stop = tf.keras.callbacks.EarlyStopping(
 
 
 # =========================
-# 10. Train
+# 8. Train
 # =========================
 
 train_start = time.perf_counter()
@@ -211,7 +160,7 @@ print(f"Training time per epoch: {train_time / epochs_ran:.2f} seconds")
 
 
 # =========================
-# 11. Evaluate
+# 9. Evaluate
 # =========================
 
 eval_start = time.perf_counter()
@@ -226,13 +175,15 @@ print(f"Evaluation time: {eval_time:.2f} seconds")
 
 
 # =========================
-# 12. Save model + label map
+# 10. Save model + label map
 # =========================
 
-model.save(str(ROOT / "clothes_model.h5"))
+WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
 
-with open(ROOT / "label_map.json", "w", encoding="utf-8") as f:
+model.save(str(MODEL_PATH))
+
+with open(LABEL_MAP_PATH, "w", encoding="utf-8") as f:
     json.dump(idx_to_label, f, ensure_ascii=False, indent=4)
 
-print("Saved model to clothes_model.h5")
-print("Saved label map to label_map.json")
+print(f"Saved model to {MODEL_PATH}")
+print(f"Saved label map to {LABEL_MAP_PATH}")

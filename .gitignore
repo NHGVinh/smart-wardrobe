@@ -6,3 +6,5 @@ venv/
 env/
 friend_repo_tmp/
 experiments/results/
+weights/**/*.h5
+weights/**/*.pth
