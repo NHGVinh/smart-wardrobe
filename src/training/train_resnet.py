@@ -177,6 +177,8 @@ num_epochs = 20
 best_model_wts = copy.deepcopy(model.state_dict())
 best_acc = 0.0
 
+train_start = time.perf_counter()
+
 for epoch in range(num_epochs):
     print(f'Epoch {epoch+1}/{num_epochs}')
     print('-' * 10)
@@ -225,6 +227,10 @@ for epoch in range(num_epochs):
             best_model_wts = copy.deepcopy(model.state_dict())
     exp_lr_scheduler.step()
     print()
+
+train_time = time.perf_counter() - train_start
+print(f"Training time: {train_time:.2f} seconds")
+print(f"Training time per epoch: {train_time / num_epochs:.2f} seconds")
 
 model.load_state_dict(best_model_wts)
 torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, 'resnet_model.pth'))

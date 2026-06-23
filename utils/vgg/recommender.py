@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 
@@ -27,6 +29,16 @@ def pick_one(df):
     if df is None or len(df) == 0:
         return None
     return df.sample(1).iloc[0].to_dict()
+
+
+def add_image_paths(df, csv_path, image_dir=None):
+    if "image_path" in df.columns:
+        return df
+
+    image_dir = Path(image_dir) if image_dir else Path(csv_path).resolve().parent / "data" / "images"
+    df = df.copy()
+    df["image_path"] = df["id"].apply(lambda image_id: str(image_dir / f"{image_id}.jpg"))
+    return df
 
 
 def filter_by_style(df, style):
@@ -65,8 +77,10 @@ def recommend_outfit(
     input_style="Casual",
     user_image_path=None,
     gender="Unisex",
+    image_dir=None,
 ):
     df = pd.read_csv(csv_path, on_bad_lines="skip")
+    df = add_image_paths(df, csv_path, image_dir=image_dir)
 
     if gender != "Unisex":
         df = df[(df["gender"] == gender) | (df["gender"] == "Unisex")]
@@ -84,12 +98,16 @@ def recommend_outfit(
         gender=gender,
     )
 
-    if input_class == "Topwear":
+    if input_class == "Dress":
+        outfit["Dress"] = user_item
+    elif input_class == "Topwear":
         outfit["Topwear"] = user_item
     else:
         outfit["Topwear"] = pick_one(style_df[style_df["group"] == "Topwear"])
 
-    if input_class == "Bottomwear":
+    if input_class == "Dress":
+        pass
+    elif input_class == "Bottomwear":
         outfit["Bottomwear"] = user_item
     else:
         candidates = style_df[style_df["group"] == "Bottomwear"]

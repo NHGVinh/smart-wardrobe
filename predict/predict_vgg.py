@@ -6,6 +6,8 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
+from PIL import Image
+import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -30,7 +32,7 @@ def parse_args():
         default=str(ROOT / "styles.csv"),
         help="CSV used for rule-based outfit suggestions.",
     )
-    parser.add_argument("--gender", default="Unisex", help="Gender filter for outfit suggestions.")
+    parser.add_argument("--gender", default=None, help="Gender filter for outfit suggestions.")
     return parser.parse_args()
 
 
@@ -91,8 +93,41 @@ def print_outfit(outfit):
         print(f"{slot}: {name} | color={color} | style={style} | image={image_path}")
 
 
+def show_outfit(outfit):
+    items = [(slot, item) for slot, item in outfit.items() if item is not None]
+    if not items:
+        return
+
+    _, axes = plt.subplots(1, len(items), figsize=(4 * len(items), 4))
+    if len(items) == 1:
+        axes = [axes]
+
+    for ax, (slot, item) in zip(axes, items):
+        image_path = item.get("image_path")
+        name = item.get("productDisplayName") or item.get("articleType") or slot
+        ax.set_title(f"{slot}\n{name}", fontsize=9)
+        ax.axis("off")
+
+        try:
+            ax.imshow(Image.open(image_path).convert("RGB"))
+        except (FileNotFoundError, TypeError, AttributeError, OSError):
+            ax.text(0.5, 0.5, "No image", ha="center", va="center")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def resolve_gender(gender):
+    if gender:
+        return gender
+
+    value = input("Enter gender (Men/Women/Unisex): ").strip()
+    return value or "Unisex"
+
+
 def main():
     args = parse_args()
+    gender = resolve_gender(args.gender)
     result = predict_vgg(args.image_path, args.model, args.labels)
 
     print("Model: VGG")
@@ -116,9 +151,10 @@ def main():
         result["color"],
         input_style=result["style"],
         user_image_path=args.image_path,
-        gender=args.gender,
+        gender=gender,
     )
     print_outfit(outfit)
+    show_outfit(outfit)
 
 
 if __name__ == "__main__":
