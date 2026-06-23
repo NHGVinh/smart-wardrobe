@@ -1,0 +1,111 @@
+{
+  "Shirts": {
+    "precision": 1.0,
+    "recall": 0.9916666666666667,
+    "f1-score": 0.99581589958159,
+    "support": 120.0
+  },
+  "Jeans": {
+    "precision": 0.9836065573770492,
+    "recall": 1.0,
+    "f1-score": 0.9917355371900827,
+    "support": 120.0
+  },
+  "Track Pants": {
+    "precision": 1.0,
+    "recall": 0.9672131147540983,
+    "f1-score": 0.9833333333333333,
+    "support": 61.0
+  },
+  "Tshirts": {
+    "precision": 0.9583333333333334,
+    "recall": 0.9583333333333334,
+    "f1-score": 0.9583333333333334,
+    "support": 120.0
+  },
+  "Casual Shoes": {
+    "precision": 0.9669421487603306,
+    "recall": 0.975,
+    "f1-score": 0.970954356846473,
+    "support": 120.0
+  },
+  "Tops": {
+    "precision": 0.9426229508196722,
+    "recall": 0.9583333333333334,
+    "f1-score": 0.9504132231404959,
+    "support": 120.0
+  },
+  "Formal Shoes": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1-score": 1.0,
+    "support": 120.0
+  },
+  "Flats": {
+    "precision": 0.9473684210526315,
+    "recall": 0.9,
+    "f1-score": 0.9230769230769231,
+    "support": 100.0
+  },
+  "Sports Shoes": {
+    "precision": 0.9831932773109243,
+    "recall": 0.975,
+    "f1-score": 0.9790794979079498,
+    "support": 120.0
+  },
+  "Shorts": {
+    "precision": 0.9819819819819819,
+    "recall": 1.0,
+    "f1-score": 0.990909090909091,
+    "support": 109.0
+  },
+  "Heels": {
+    "precision": 0.92,
+    "recall": 0.9583333333333334,
+    "f1-score": 0.9387755102040817,
+    "support": 120.0
+  },
+  "Dresses": {
+    "precision": 0.989247311827957,
+    "recall": 0.989247311827957,
+    "f1-score": 0.989247311827957,
+    "support": 93.0
+  },
+  "Skirts": {
+    "precision": 1.0,
+    "recall": 0.9230769230769231,
+    "f1-score": 0.96,
+    "support": 26.0
+  },
+  "Trousers": {
+    "precision": 1.0,
+    "recall": 0.9905660377358491,
+    "f1-score": 0.995260663507109,
+    "support": 106.0
+  },
+  "Jackets": {
+    "precision": 1.0,
+    "recall": 0.9423076923076923,
+    "f1-score": 0.9702970297029703,
+    "support": 52.0
+  },
+  "Sweaters": {
+    "precision": 0.9482758620689655,
+    "recall": 1.0,
+    "f1-score": 0.9734513274336283,
+    "support": 55.0
+  },
+  "accuracy": 0.9737516005121639,
+  "macro avg": {
+    "precision": 0.9763482402833028,
+    "recall": 0.9705673591480741,
+    "f1-score": 0.9731676898746886,
+    "support": 1562.0
+  },
+  "weighted avg": {
+    "precision": 0.9740664805808256,
+    "recall": 0.9737516005121639,
+    "f1-score": 0.9737297685145678,
+    "support": 1562.0
+  }
+}

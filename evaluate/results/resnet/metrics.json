@@ -1,0 +1,54 @@
+{
+  "checkpoint": "/content/smart-wardrobe/weights/resnet/resnet_model.pth",
+  "device": "cuda:0",
+  "test_size": 1562,
+  "category": {
+    "accuracy": 0.9737516005121639,
+    "precision_macro": 0.9763482402833028,
+    "recall_macro": 0.9705673591480741,
+    "f1_macro": 0.9731676898746886,
+    "precision_weighted": 0.9740664805808256,
+    "recall_weighted": 0.9737516005121639,
+    "f1_weighted": 0.9737297685145678
+  },
+  "style": {
+    "accuracy": 0.9878361075544174,
+    "precision_macro": 0.9477499503147105,
+    "recall_macro": 0.9565476709372822,
+    "f1_macro": 0.9448214420699077,
+    "precision_weighted": 0.988262716746891,
+    "recall_weighted": 0.9878361075544174,
+    "f1_weighted": 0.9878543581040508
+  },
+  "joint_accuracy": 0.9660691421254801,
+  "inference_time_seconds": 5.13366638000025,
+  "inference_time_per_image_seconds": 0.003286598194622439,
+  "params": 11188311,
+  "category_classes": [
+    "Shirts",
+    "Jeans",
+    "Track Pants",
+    "Tshirts",
+    "Casual Shoes",
+    "Tops",
+    "Formal Shoes",
+    "Flats",
+    "Sports Shoes",
+    "Shorts",
+    "Heels",
+    "Dresses",
+    "Skirts",
+    "Trousers",
+    "Jackets",
+    "Sweaters"
+  ],
+  "style_classes": [
+    "Casual",
+    "Ethnic",
+    "Formal",
+    "Sports",
+    "Smart Casual",
+    "Party",
+    "Travel"
+  ]
+}

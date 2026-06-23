@@ -1,0 +1,57 @@
+{
+  "Casual": {
+    "precision": 0.9892280071813285,
+    "recall": 0.9945848375451264,
+    "f1-score": 0.991899189918992,
+    "support": 1108.0
+  },
+  "Ethnic": {
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1-score": 0.8571428571428571,
+    "support": 8.0
+  },
+  "Formal": {
+    "precision": 1.0,
+    "recall": 0.9854368932038835,
+    "f1-score": 0.9926650366748166,
+    "support": 206.0
+  },
+  "Sports": {
+    "precision": 0.9783549783549783,
+    "recall": 0.9658119658119658,
+    "f1-score": 0.9720430107526882,
+    "support": 234.0
+  },
+  "Smart Casual": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1-score": 1.0,
+    "support": 1.0
+  },
+  "Party": {
+    "precision": 0.6666666666666666,
+    "recall": 1.0,
+    "f1-score": 0.8,
+    "support": 4.0
+  },
+  "Travel": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1-score": 1.0,
+    "support": 1.0
+  },
+  "accuracy": 0.9878361075544174,
+  "macro avg": {
+    "precision": 0.9477499503147105,
+    "recall": 0.9565476709372822,
+    "f1-score": 0.9448214420699077,
+    "support": 1562.0
+  },
+  "weighted avg": {
+    "precision": 0.988262716746891,
+    "recall": 0.9878361075544174,
+    "f1-score": 0.9878543581040508,
+    "support": 1562.0
+  }
+}
