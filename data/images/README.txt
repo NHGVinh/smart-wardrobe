@@ -1,0 +1,1 @@
+Các file ảnh trong dataset được xóa đi để gọn nhẹ thuận tiện cho việc đọc file

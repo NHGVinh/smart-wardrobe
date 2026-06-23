@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+friend_repo_tmp/
+experiments/results/
+evaluate/results/
+demo_uploads/
+my_closet/
+wardrobe.db
