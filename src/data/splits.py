@@ -68,15 +68,17 @@ def prepare_vgg_dataframe(csv_path, image_dir, max_per_class=DEFAULT_MAX_PER_CLA
     )
 
 
-def prepare_resnet_dataframe(csv_path, image_dir, max_per_class=DEFAULT_MAX_PER_CLASS):
+def prepare_resnet_dataframe(csv_path, image_dir, max_per_class=DEFAULT_MAX_PER_CLASS, seed=42):
     df = pd.read_csv(csv_path, on_bad_lines="skip")
-    df = df[
-        (df["masterCategory"].isin(["Apparel", "Footwear"]))
-        & (df["usage"].notna())
-        & (df["articleType"].isin(RESNET_TARGET_CATEGORIES))
-    ].copy()
+    df["label_name"] = df["articleType"].apply(map_vgg_article_type)
+    df = df.dropna(subset=["label_name", "usage"])
     df = filter_existing_images(df, image_dir)
-    return df.groupby("articleType", group_keys=False).head(max_per_class).reset_index(drop=True)
+    return (
+        df.sample(frac=1, random_state=seed)
+        .groupby("label_name", group_keys=False)
+        .head(max_per_class)
+        .reset_index(drop=True)
+    )
 
 
 def split_dataframe(df, stratify_col, seed=42, test_size=0.2, val_size=0.2):

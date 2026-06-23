@@ -8,10 +8,10 @@ from sklearn.neighbors import NearestNeighbors
 from src.preprocessing.resnetPP import data_transforms, load_resnet_image
 
 
-TOPS_LIST = ["Tshirts", "Shirts", "Top", "Tops", "Sweaters", "Jackets"]
-BOTTOMS_LIST = ["Jeans", "Trousers", "Shorts", "Skirts", "Track Pants"]
-SHOES_LIST = ["Casual Shoes", "Formal Shoes", "Sports Shoes", "Heels", "Flats", "Sandals", "Flip Flops"]
-DRESS_LIST = ["Dresses", "Kurtas"]
+TOPS_LIST = ["Topwear", "Tshirts", "Shirts", "Top", "Tops", "Sweaters", "Jackets"]
+BOTTOMS_LIST = ["Bottomwear", "Jeans", "Trousers", "Shorts", "Skirts", "Track Pants"]
+SHOES_LIST = ["Shoes", "Casual Shoes", "Formal Shoes", "Sports Shoes", "Heels", "Flats", "Sandals", "Flip Flops"]
+DRESS_LIST = ["Dress", "Dresses", "Kurtas"]
 
 
 def load_wardrobe_csv(csv_path):

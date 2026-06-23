@@ -10,8 +10,14 @@ from torchvision import models, transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import os
+import sys
 import time
 import copy
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from src.data.splits import DEFAULT_MAX_PER_CLASS, prepare_resnet_dataframe, save_split_csvs, split_dataframe
 
@@ -34,10 +40,10 @@ SPLITS_DIR = os.path.join(OUTPUT_DIR, 'splits')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df_final = prepare_resnet_dataframe('styles.csv', image_dir, max_per_class=DEFAULT_MAX_PER_CLASS)
-print(f"[*] Số dòng ResNet sau khi lọc và giới hạn mỗi loại: {len(df_final)}")
+print(f"[*] Số dòng ResNet sau khi lọc và giới hạn mỗi nhóm: {len(df_final)}")
 
 # Tạo từ điển dịch Tên (Chữ) sang Số (để AI hiểu được)
-cat_to_idx = {cat: i for i, cat in enumerate(df_final['articleType'].unique())}
+cat_to_idx = {cat: i for i, cat in enumerate(df_final['label_name'].unique())}
 style_to_idx = {style: i for i, style in enumerate(df_final['usage'].unique())}
 idx_to_cat = {i: cat for cat, i in cat_to_idx.items()}
 idx_to_style = {i: style for style, i in style_to_idx.items()}
@@ -47,7 +53,7 @@ torch.save({'cat': idx_to_cat, 'style': idx_to_style}, os.path.join(OUTPUT_DIR, 
 print(f"[*] AI sẽ học {len(cat_to_idx)} Loại đồ và {len(style_to_idx)} Phong cách.")
 
 # Chia tập Train, Val và Test cố định để evaluate dùng lại đúng dữ liệu.
-train_df, val_df, test_df = split_dataframe(df_final, 'articleType', seed=42)
+train_df, val_df, test_df = split_dataframe(df_final, 'label_name', seed=42)
 save_split_csvs(SPLITS_DIR, train_df, val_df, test_df)
 print(f"[*] Đã lưu data split vào '{SPLITS_DIR}'")
 print(f"[*] Split size: train={len(train_df)}, val={len(val_df)}, test={len(test_df)}")
@@ -88,7 +94,7 @@ class FashionDataset(Dataset):
             image = self.transform(image)
 
         # Lấy nhãn số
-        cat_label = cat_to_idx[row['articleType']]
+        cat_label = cat_to_idx[row['label_name']]
         style_label = style_to_idx[row['usage']]
 
         return image, cat_label, style_label

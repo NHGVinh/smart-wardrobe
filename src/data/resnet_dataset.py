@@ -25,6 +25,6 @@ class ResNetFashionDataset(Dataset):
 
         return (
             image,
-            torch.tensor(self.cat_to_idx[row["articleType"]], dtype=torch.long),
+            torch.tensor(self.cat_to_idx[row["label_name"]], dtype=torch.long),
             torch.tensor(self.style_to_idx[row["usage"]], dtype=torch.long),
         )

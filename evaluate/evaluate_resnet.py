@@ -45,7 +45,7 @@ class ResNetEvalDataset(Dataset):
         row = self.dataframe.iloc[idx]
         image_path = self.image_dir / f"{row['id']}.jpg"
         image = data_transforms["val"](load_resnet_image(image_path))
-        category = self.cat_to_idx[row["articleType"]]
+        category = self.cat_to_idx[row["label_name"]]
         style = self.style_to_idx[row["usage"]]
         return image, category, style
 
@@ -80,7 +80,7 @@ def load_test_dataframe(args):
         return pd.read_csv(test_split)
 
     df = prepare_resnet_dataframe(args.csv_path, args.image_dir, max_per_class=args.max_per_class)
-    _, _, test_df = split_dataframe(df, "articleType", seed=args.seed)
+    _, _, test_df = split_dataframe(df, "label_name", seed=args.seed)
     return test_df
 
 
@@ -130,7 +130,7 @@ def main():
 
     test_df = load_test_dataframe(args)
     test_df = test_df[
-        test_df["articleType"].isin(cat_to_idx)
+        test_df["label_name"].isin(cat_to_idx)
         & test_df["usage"].isin(style_to_idx)
     ].reset_index(drop=True)
 
