@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.data.splits import prepare_resnet_dataframe, split_dataframe
+from src.data.splits import DEFAULT_MAX_PER_CLASS, prepare_resnet_dataframe, split_dataframe
 from src.models.resnet import MultiTaskResNet
 from src.preprocessing.resnetPP import data_transforms, load_resnet_image
 
@@ -58,7 +58,7 @@ def parse_args():
     parser.add_argument("--image-dir", default=str(ROOT / "data" / "images"))
     parser.add_argument("--splits-dir", default=str(DEFAULT_SPLITS_DIR))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
-    parser.add_argument("--max-per-class", type=int, default=600)
+    parser.add_argument("--max-per-class", type=int, default=DEFAULT_MAX_PER_CLASS)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-warmup", action="store_true", help="Include first-call PyTorch overhead in timing.")

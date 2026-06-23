@@ -12,6 +12,8 @@ CURRENT_TF_CLASSES = {
     "Accessories": ["Handbags", "Watches", "Belts", "Wallets"],
 }
 
+DEFAULT_MAX_PER_CLASS = 600
+
 RESNET_TARGET_CATEGORIES = [
     "Tshirts",
     "Shirts",
@@ -33,7 +35,7 @@ RESNET_TARGET_CATEGORIES = [
 ]
 
 
-def map_plain_article_type(article_type):
+def map_vgg_article_type(article_type):
     article_type = str(article_type)
     if article_type in CURRENT_TF_CLASSES["Topwear"]:
         return "Topwear"
@@ -53,9 +55,9 @@ def filter_existing_images(df, image_dir):
     return df[df["id"].apply(lambda image_id: (image_dir / f"{image_id}.jpg").exists())].copy()
 
 
-def prepare_plain_dataframe(csv_path, image_dir, max_per_class=750, seed=42):
+def prepare_vgg_dataframe(csv_path, image_dir, max_per_class=DEFAULT_MAX_PER_CLASS, seed=42):
     df = pd.read_csv(csv_path, on_bad_lines="skip")
-    df["label_name"] = df["articleType"].apply(map_plain_article_type)
+    df["label_name"] = df["articleType"].apply(map_vgg_article_type)
     df = df.dropna(subset=["label_name"])
     df = filter_existing_images(df, image_dir)
     return (
@@ -66,7 +68,7 @@ def prepare_plain_dataframe(csv_path, image_dir, max_per_class=750, seed=42):
     )
 
 
-def prepare_resnet_dataframe(csv_path, image_dir, max_per_class=600):
+def prepare_resnet_dataframe(csv_path, image_dir, max_per_class=DEFAULT_MAX_PER_CLASS):
     df = pd.read_csv(csv_path, on_bad_lines="skip")
     df = df[
         (df["masterCategory"].isin(["Apparel", "Footwear"]))
@@ -99,3 +101,7 @@ def save_split_csvs(output_dir, train_df, val_df, test_df):
     train_df.to_csv(output_dir / "train.csv", index=False)
     val_df.to_csv(output_dir / "val.csv", index=False)
     test_df.to_csv(output_dir / "test.csv", index=False)
+
+
+map_plain_article_type = map_vgg_article_type
+prepare_plain_dataframe = prepare_vgg_dataframe

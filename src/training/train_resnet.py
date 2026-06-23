@@ -8,12 +8,15 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models, transforms
 from torch.utils.data import Dataset, DataLoader
-import pandas as pd
 from PIL import Image
 import os
 import time
 import copy
-from sklearn.model_selection import train_test_split
+
+from src.data.splits import DEFAULT_MAX_PER_CLASS, prepare_resnet_dataframe, save_split_csvs, split_dataframe
+
+# Bắt đầu đo tổng thời gian chạy script
+script_start_time = time.perf_counter()
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"[*] Đang sử dụng thiết bị: {device}")
@@ -21,29 +24,17 @@ print(f"[*] Đang sử dụng thiết bị: {device}")
 # ==========================================
 # 1. ĐỌC VÀ LỌC DỮ LIỆU TỪ FILE CSV
 # ==========================================
+print("\n--- 1. Chuẩn bị dữ liệu ---")
+prep_start_time = time.perf_counter()
+
 print("[*] Đang đọc file styles.csv...")
-df = pd.read_csv('styles.csv', on_bad_lines='skip')
 image_dir = 'data/images'
 OUTPUT_DIR = 'weights/resnet'
+SPLITS_DIR = os.path.join(OUTPUT_DIR, 'splits')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Lọc chỉ lấy Quần áo và bỏ qua các dòng bị thiếu dữ liệu Phong cách (usage)
-df_apparel = df[(df['masterCategory'].isin(['Apparel', 'Footwear'])) & (df['usage'].notna())].copy()
-
-target_categories = [
-    'Tshirts', 'Shirts', 'Top', 'Tops', 'Sweaters', 'Jackets',  # Nhóm Áo
-    'Jeans', 'Trousers', 'Shorts', 'Skirts', 'Track Pants',     # Nhóm Quần/Chân váy
-    'Casual Shoes', 'Formal Shoes', 'Sports Shoes', 'Heels', 'Flats', # Nhóm Giày
-    'Dresses'                                                   # Nhóm Váy liền thân
-]
-df_filtered = df_apparel[df_apparel['articleType'].isin(target_categories)].copy()
-df_filtered = df_filtered[
-    df_filtered['id'].apply(lambda image_id: os.path.exists(os.path.join(image_dir, str(image_id) + ".jpg")))
-].copy()
-print(f"[*] Số dòng có ảnh thật trong {image_dir}: {len(df_filtered)}")
-
-# Giới hạn 600 ảnh mỗi loại để máy không bị quá tải
-df_final = df_filtered.groupby('articleType').head(600)
+df_final = prepare_resnet_dataframe('styles.csv', image_dir, max_per_class=DEFAULT_MAX_PER_CLASS)
+print(f"[*] Số dòng ResNet sau khi lọc và giới hạn mỗi loại: {len(df_final)}")
 
 # Tạo từ điển dịch Tên (Chữ) sang Số (để AI hiểu được)
 cat_to_idx = {cat: i for i, cat in enumerate(df_final['articleType'].unique())}
@@ -55,8 +46,11 @@ idx_to_style = {i: style for style, i in style_to_idx.items()}
 torch.save({'cat': idx_to_cat, 'style': idx_to_style}, os.path.join(OUTPUT_DIR, 'labels_map.pth'))
 print(f"[*] AI sẽ học {len(cat_to_idx)} Loại đồ và {len(style_to_idx)} Phong cách.")
 
-# Chia tập Train và Val
-train_df, val_df = train_test_split(df_final, test_size=0.2, random_state=42)
+# Chia tập Train, Val và Test cố định để evaluate dùng lại đúng dữ liệu.
+train_df, val_df, test_df = split_dataframe(df_final, 'articleType', seed=42)
+save_split_csvs(SPLITS_DIR, train_df, val_df, test_df)
+print(f"[*] Đã lưu data split vào '{SPLITS_DIR}'")
+print(f"[*] Split size: train={len(train_df)}, val={len(val_df)}, test={len(test_df)}")
 
 # ==========================================
 # 2. XÂY DỰNG CLASS ĐỌC ẢNH TỰ ĐỘNG (ĐỒNG BỘ INFERENCE)
@@ -130,7 +124,10 @@ image_datasets = {
 }
 dataloaders = {x: DataLoader(image_datasets[x], batch_size=32, shuffle=True) for x in ['train', 'val']}
 
-# Tạo Kiến trúc 1 Não - 2 Đầu Ra
+prep_time = time.perf_counter() - prep_start_time
+print(f">> Khởi tạo dữ liệu và DataLoader hoàn tất trong: {prep_time:.2f} giây\n")
+
+# Tạo Kiến trúc 1 Không - 2 Đầu Ra
 class MultiTaskResNet(nn.Module):
     def __init__(self, num_categories, num_styles):
         super(MultiTaskResNet, self).__init__()
@@ -177,9 +174,12 @@ num_epochs = 20
 best_model_wts = copy.deepcopy(model.state_dict())
 best_acc = 0.0
 
-train_start = time.perf_counter()
+print("\n--- 2. Bắt đầu quá trình huấn luyện ---")
+train_start_time = time.perf_counter()
 
 for epoch in range(num_epochs):
+    epoch_start_time = time.perf_counter() # Bắt đầu đo thời gian 1 Epoch
+    
     print(f'Epoch {epoch+1}/{num_epochs}')
     print('-' * 10)
 
@@ -225,13 +225,26 @@ for epoch in range(num_epochs):
         if phase == 'val' and epoch_acc > best_acc:
             best_acc = epoch_acc
             best_model_wts = copy.deepcopy(model.state_dict())
+    
     exp_lr_scheduler.step()
-    print()
+    
+    # Kết thúc đo thời gian 1 Epoch
+    epoch_time = time.perf_counter() - epoch_start_time
+    print(f'>> Epoch {epoch+1} hoàn tất trong: {epoch_time:.2f} giây\n')
 
-train_time = time.perf_counter() - train_start
-print(f"Training time: {train_time:.2f} seconds")
-print(f"Training time per epoch: {train_time / num_epochs:.2f} seconds")
+# Kết thúc toàn bộ quá trình train
+train_total_time = time.perf_counter() - train_start_time
 
 model.load_state_dict(best_model_wts)
 torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, 'resnet_model.pth'))
-print("\n[*] Đã lưu mô hình KÉP vào file 'weights/resnet/resnet_model.pth'")
+print(f"[*] Đã lưu mô hình KÉP vào file '{OUTPUT_DIR}/resnet_model.pth'")
+
+# Báo cáo tổng kết
+script_total_time = time.perf_counter() - script_start_time
+print("\n==================================================")
+print("[ BÁO CÁO THỜI GIAN HUẤN LUYỆN ]")
+print(f"Chuẩn bị dữ liệu: {prep_time:.2f} giây")
+print(f"Thời gian Train ({num_epochs} Epochs): {train_total_time:.2f} giây")
+print(f"TỔNG THỜI GIAN CHẠY SCRIPT: {script_total_time:.2f} giây")
+print(f"Độ chính xác cao nhất (Best Val Acc): {best_acc:.4f}")
+print("==================================================\n")

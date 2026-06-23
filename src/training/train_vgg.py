@@ -11,9 +11,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.data.splits import prepare_plain_dataframe, save_split_csvs, split_dataframe
+from src.data.splits import DEFAULT_MAX_PER_CLASS, prepare_vgg_dataframe, save_split_csvs, split_dataframe
+from src.data.vgg_dataset import VggClothesDataGenerator
 from src.models.VGG import build_clothes_model
-from utils.vgg.data_generator import ClothesDataGenerator
 
 
 def parse_args():
@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument("--csv-path", default=str(ROOT / "styles.csv"))
     parser.add_argument("--image-dir", default=str(ROOT / "data" / "images"))
     parser.add_argument("--output-dir", default=str(ROOT / "weights" / "vgg"))
-    parser.add_argument("--max-per-class", type=int, default=750)
+    parser.add_argument("--max-per-class", type=int, default=DEFAULT_MAX_PER_CLASS)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
@@ -44,7 +44,7 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    df = prepare_plain_dataframe(
+    df = prepare_vgg_dataframe(
         args.csv_path,
         args.image_dir,
         max_per_class=args.max_per_class,
@@ -57,9 +57,9 @@ def main():
     label_map = {label: idx for idx, label in enumerate(classes)}
     idx_to_label = {idx: label for label, idx in label_map.items()}
 
-    train_gen = ClothesDataGenerator(train_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=True)
-    val_gen = ClothesDataGenerator(val_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=False)
-    test_gen = ClothesDataGenerator(test_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=False)
+    train_gen = VggClothesDataGenerator(train_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=True)
+    val_gen = VggClothesDataGenerator(val_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=False)
+    test_gen = VggClothesDataGenerator(test_df, args.image_dir, label_map, batch_size=args.batch_size, shuffle=False)
 
     model = build_clothes_model(input_shape=(128, 128, 3), num_classes=len(label_map))
     model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])

@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.data.splits import prepare_plain_dataframe, split_dataframe
-from utils.vgg.data_generator import ClothesDataGenerator
+from src.data.splits import DEFAULT_MAX_PER_CLASS, prepare_vgg_dataframe, split_dataframe
+from src.data.vgg_dataset import VggClothesDataGenerator
 
 
 DEFAULT_MODEL_PATH = ROOT / "weights" / "vgg" / "vgg_model.h5"
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument("--image-dir", default=str(ROOT / "data" / "images"))
     parser.add_argument("--splits-dir", default=str(DEFAULT_SPLITS_DIR))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
-    parser.add_argument("--max-per-class", type=int, default=750)
+    parser.add_argument("--max-per-class", type=int, default=DEFAULT_MAX_PER_CLASS)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-warmup", action="store_true", help="Include first-call TensorFlow overhead in timing.")
@@ -55,7 +55,7 @@ def load_test_dataframe(args):
     if test_split.exists():
         return pd.read_csv(test_split)
 
-    df = prepare_plain_dataframe(
+    df = prepare_vgg_dataframe(
         args.csv_path,
         args.image_dir,
         max_per_class=args.max_per_class,
@@ -84,7 +84,7 @@ def main():
 
     test_df = load_test_dataframe(args)
     test_df = test_df[test_df["label_name"].isin(label_map)].reset_index(drop=True)
-    test_gen = ClothesDataGenerator(
+    test_gen = VggClothesDataGenerator(
         test_df,
         args.image_dir,
         label_map,
