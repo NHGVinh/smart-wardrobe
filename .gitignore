@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+friend_repo_tmp/
+experiments/results/
+evaluate/results/
+weights/**/*.h5
+weights/**/*.pth
